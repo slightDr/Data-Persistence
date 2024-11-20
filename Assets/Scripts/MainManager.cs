@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -11,17 +12,24 @@ public class MainManager : MonoBehaviour
     public Rigidbody Ball;
 
     public Text ScoreText;
+    public Text MaxScoreText;
     public GameObject GameOverText;
     
     private bool m_Started = false;
     private int m_Points;
     
     private bool m_GameOver = false;
-
+    
+    public string playerName;
+    public int maxPoints;
     
     // Start is called before the first frame update
     void Start()
     {
+        // 加载数据
+        LoadMaxPoints();
+        playerName = MenuManager.instance.playerName;
+        
         const float step = 0.6f;
         int perLine = Mathf.FloorToInt(4.0f / step);
         
@@ -70,7 +78,55 @@ public class MainManager : MonoBehaviour
 
     public void GameOver()
     {
+        if (m_Points > maxPoints) {
+            maxPoints = m_Points;
+            SaveMaxPoints();
+        }
         m_GameOver = true;
         GameOverText.SetActive(true);
+    }
+
+    [System.Serializable]
+    class SaveData
+    {
+        public string playerName;
+        public int points;
+    }
+
+    public void SaveMaxPoints() {
+        Debug.Log("Saving Max Points");
+        SaveData data = new SaveData();
+        data.playerName = playerName;
+        data.points = maxPoints;
+        string json = JsonUtility.ToJson(data);
+        File.WriteAllText(Application.persistentDataPath + "/MaxPoints.json", json);
+        MaxScoreText.text = $"Best Score: {playerName}: {maxPoints}";
+    }
+
+    public void LoadMaxPoints() {
+        string path = Application.persistentDataPath + "/MaxPoints.json";
+        string maxPlayerName;
+        if (File.Exists(path)) {
+            string json = File.ReadAllText(path);
+            SaveData data = JsonUtility.FromJson<SaveData>(json);
+            
+            maxPlayerName = data.playerName;
+            maxPoints = data.points;
+        } else {
+            maxPlayerName = "";
+            maxPoints = 0;
+        }
+        MaxScoreText.text = $"Best Score: {maxPlayerName}: {maxPoints}";
+    }
+
+    public void ResetMaxPoints() {
+        Debug.Log("Resetting Max Points");
+        maxPoints = 0;
+        SaveData data = new SaveData();
+        data.playerName = "";
+        data.points = maxPoints;
+        string json = JsonUtility.ToJson(data);
+        File.WriteAllText(Application.persistentDataPath + "/MaxPoints.json", json);
+        MaxScoreText.text = "Best Score: : 0";
     }
 }
